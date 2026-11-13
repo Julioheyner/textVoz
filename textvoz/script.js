@@ -228,46 +228,6 @@ $('navPause').addEventListener('click', togglePause);
 $('navStop').addEventListener('click', stopSpeech);
 $('navTheme').addEventListener('click', () => themeBtn.click());
 
-/* ---------- Bottom nav auto-hide (mobile) ---------- */
-let lastScrollY = window.scrollY;
-let ticking = false;
-
-function handleScroll() {
-  const isMobile = window.matchMedia('(max-width: 640px)').matches;
-  if (!isMobile || !bottomNav) {
-    ticking = false;
-    return;
-  }
-  const currentY = window.scrollY;
-  const delta = currentY - lastScrollY;
-
-  // Ignora micro-scroll e o topo da página
-  if (Math.abs(delta) > 6 && currentY > 40) {
-    if (delta > 0) {
-      // rolando para baixo → esconde
-      bottomNav.classList.add('hidden');
-    } else {
-      // rolando para cima → mostra
-      bottomNav.classList.remove('hidden');
-    }
-  }
-
-  // Sempre visível quando estiver perto do topo
-  if (currentY < 40) {
-    bottomNav.classList.remove('hidden');
-  }
-
-  lastScrollY = currentY;
-  ticking = false;
-}
-
-window.addEventListener('scroll', () => {
-  if (!ticking) {
-    window.requestAnimationFrame(handleScroll);
-    ticking = true;
-  }
-}, { passive: true });
-
 /* ---------- Tema ---------- */
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
