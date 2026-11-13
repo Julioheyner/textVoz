@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#5b3df5" />
+  <title>TextVoz – leitor de texto para estudar idiomas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#" aria-label="TextVoz">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="10" fill="currentColor"/>
+        <g fill="#fff"><rect x="6" y="13" width="3" height="6" rx="1.5"/><rect x="11" y="9" width="3" height="14" rx="1.5"/><rect x="16" y="5" width="3" height="22" rx="1.5"/><rect x="21" y="10" width="3" height="12" rx="1.5"/><rect x="26" y="14" width="3" height="4" rx="1.5"/></g>
+      </svg>
+      TextVoz
+    </a>
+    <div class="tools">
+      <div class="langs" role="group" data-i18n-aria="langSwitch">
+        <button type="button" class="flag" data-lang="pt" aria-label="Português" title="Português">
+          <svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#009c3b"/><path d="M15 2 27 10 15 18 3 10Z" fill="#ffdf00"/><circle cx="15" cy="10" r="4.2" fill="#002776"/></svg>
+        </button>
+        <button type="button" class="flag" data-lang="es" aria-label="Español" title="Español">
+          <svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#c60b1e"/><rect y="5" width="30" height="10" fill="#ffc400"/></svg>
+        </button>
+        <button type="button" class="flag" data-lang="en" aria-label="English" title="English">
+          <svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#fff"/><g fill="#b22234"><rect width="30" height="1.6"/><rect y="3.2" width="30" height="1.6"/><rect y="6.4" width="30" height="1.6"/><rect y="9.6" width="30" height="1.6"/><rect y="12.8" width="30" height="1.6"/><rect y="16" width="30" height="1.6"/><rect y="18.4" width="30" height="1.6"/></g><rect width="13" height="10.8" fill="#3c3b6e"/></svg>
+        </button>
+      </div>
+      <button id="themeBtn" class="icon-btn" type="button" data-i18n-aria="themeLabel">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h1 data-i18n="title">Ouça cada palavra do seu texto.</h1>
+      <p data-i18n="intro"></p>
+    </section>
+
+    <section class="stage" data-i18n-aria="stageLabel">
+      <div class="options">
+        <label class="field">
+          <span data-i18n="voiceLang">Idioma</span>
+          <select id="languageSelect">
+            <option value="pt-BR">Português (BR)</option>
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Español (ES)</option>
+            <option value="fr-FR">Français (FR)</option>
+            <option value="de-DE">Deutsch (DE)</option>
+            <option value="it-IT">Italiano (IT)</option>
+            <option value="id-ID">Bahasa Indonesia (ID)</option>
+            <option value="te-IN">తెలుగు (IN)</option>
+            <option value="zh-CN">中文 (简体, CN)</option>
+            <option value="zh-TW">中文 (繁體, TW)</option>
+            <option value="hi-IN">हिन्दी (IN)</option>
+            <option value="ar-SA">العربية (SA)</option>
+            <option value="bn-BD">বাংলা (BD)</option>
+            <option value="ru-RU">Русский (RU)</option>
+            <option value="ja-JP">日本語 (JP)</option>
+            <option value="pa-IN">ਪੰਜਾਬੀ (IN)</option>
+            <option value="mr-IN">मराठी (IN)</option>
+            <option value="ur-PK">اردو (PK)</option>
+            <option value="tr-TR">Türkçe (TR)</option>
+            <option value="vi-VN">Tiếng Việt (VN)</option>
+            <option value="ko-KR">한국어 (KR)</option>
+            <option value="fa-IR">فارسی (IR)</option>
+            <option value="sw-KE">Kiswahili (KE)</option>
+            <option value="th-TH">ไทย (TH)</option>
+            <option value="nl-NL">Nederlands (NL)</option>
+            <option value="pl-PL">Polski (PL)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span><b data-i18n="speed">Velocidade</b> <output id="rateOut">1x</output></span>
+          <input type="range" id="rateRange" min="0.5" max="1.5" step="0.1" value="1" />
+        </label>
+      </div>
+
+      <div class="editor">
+        <textarea id="textInput" data-i18n-ph="placeholder" data-i18n-aria="textLabel"></textarea>
+        <div id="reader" class="reader" hidden aria-live="off"></div>
+      </div>
+
+      <div class="wave" id="wave" aria-hidden="true"></div>
+
+      <div class="controls">
+        <button id="playBtn" class="btn primary" type="button"><i class="fas fa-play"></i> Ouvir</button>
+        <button id="pauseBtn" class="btn" type="button" disabled><i class="fas fa-pause"></i> Pausar</button>
+        <button id="stopBtn" class="btn" type="button" disabled><i class="fas fa-stop"></i> <span data-i18n="stop">Parar</span></button>
+        <button id="clearBtn" class="btn ghost" type="button"><i class="fas fa-trash"></i> <span data-i18n="clear">Limpar</span></button>
+      </div>
+
+      <p id="status" class="status" role="status">0 palavras</p>
+    </section>
+  </main>
+
+    <footer>
+    <span class="footer-credit">
+      <span data-i18n="credit">Desenvolvido com</span> 
+      <i class="fas fa-mug-hot" aria-hidden="true" style="color: var(--accent);"></i> 
+      <span data-i18n="creditBy">por Julio Gonzales</span>
+    </span>
+    
+    <div class="social-icons">
+      <!-- Botão de Compartilhar -->
+      <button id="shareBtn" class="share-btn" type="button" data-i18n-aria="shareLabel" aria-label="Compartilhar">
+        <i class="fas fa-share-nodes"></i>
+      </button>
+      
+      <!-- E-mail -->
+      <a href="mailto:julioheyner@proton.me?subject=Contato%20TextVoz" aria-label="E-mail">
+        <i class="fas fa-envelope"></i>
+      </a>
+      
+      <!-- GitHub -->
+      <a href="https://github.com/Julioheyner" target="_blank" rel="noopener" aria-label="GitHub">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+  </footer>
+
+  <!-- Bottom nav (mobile) -->
+  <nav class="bottom-nav" id="bottomNav" aria-label="Ações rápidas">
+    <button class="nav-item" id="navPlay" type="button">
+      <i class="fas fa-play"></i><span data-i18n="navPlay">Ouvir</span>
+    </button>
+    <button class="nav-item" id="navPause" type="button" disabled>
+      <i class="fas fa-pause"></i><span data-i18n="navPause">Pausar</span>
+    </button>
+    <button class="nav-item" id="navStop" type="button" disabled>
+      <i class="fas fa-stop"></i><span data-i18n="navStop">Parar</span>
+    </button>
+    <button class="nav-item" id="navTheme" type="button">
+      <i class="fas fa-moon"></i><span data-i18n="navTheme">Tema</span>
+    </button>
+  </nav>
+
+  <script src="script.js"></script>
+</body>
+</html>
