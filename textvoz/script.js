@@ -1,3 +1,17 @@
+(function() {
+  const header = document.querySelector('.top');
+  if (!header) return;
+  
+  const THRESHOLD = 24;
+  
+  const onScroll = () => {
+    header.classList.toggle('scrolled', window.scrollY > THRESHOLD);
+  };
+  
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
 const synth = window.speechSynthesis;
 
 const $ = (id) => document.getElementById(id);
@@ -15,8 +29,7 @@ const wave = $('wave');
 const themeBtn = $('themeBtn');
 const shareBtn = $('shareBtn');
 
-let words = []; // { el, start, end }
-let current = -1;
+let synthVoices = [];
 
 /* ---------- Idiomas da interface ---------- */
 const I18N = {
@@ -138,10 +151,10 @@ function applyLang(lang) {
 document.querySelectorAll('.flag').forEach((b) => b.addEventListener('click', () => applyLang(b.dataset.lang)));
 
 /* ---------- Ondas ---------- */
-for (let i = 0; i < 28; i++) {
+for (let i = 0; i < 32; i++) {
   const bar = document.createElement('i');
   bar.style.setProperty('--i', i);
-  bar.style.setProperty('--h', (0.3 + 0.7 * Math.abs(Math.sin(i * 1.7))).toFixed(2));
+  bar.style.setProperty('--h', (0.3 + 0.7 * Math.abs(Math.sin(i * 1.5))).toFixed(2));
   wave.appendChild(bar);
 }
 
@@ -161,6 +174,24 @@ rateRange.addEventListener('input', () => {
   rateOut.textContent = Number(rateRange.value).toString().replace('.', ',') + 'x';
 });
 
+/* ---------- Vozes ---------- */
+function loadVoices() {
+  synthVoices = synth.getVoices();
+}
+
+if (synth.onvoiceschanged !== undefined) {
+  synth.onvoiceschanged = loadVoices;
+}
+loadVoices();
+
+function getBestVoice(lang) {
+  if (!synthVoices.length) return null;
+  const available = synthVoices.filter(v => v.lang.replace('_', '-').toLowerCase().startsWith(lang.toLowerCase()));
+  if (!available.length) return null;
+  const googleVoice = available.find(v => v.name.includes('Google'));
+  return googleVoice || available[0];
+}
+
 /* ---------- Estado da interface ---------- */
 function setState(state) {
   currentState = state;
@@ -176,14 +207,20 @@ function setState(state) {
   playBtn.innerHTML = '<i class="fas fa-play"></i> ' + (state === 'paused' ? t('resume') : t('play'));
   pauseBtn.innerHTML = '<i class="fas fa-pause"></i> ' + t('pause');
   
-  reader.hidden = !active;
-  textInput.hidden = active;
+  if (active) {
+    // Oculta o textarea e mostra o leitor
+    textInput.hidden = true;
+    reader.hidden = false;
+  } else {
+    // Mostra o textarea e oculta o leitor
+    textInput.hidden = false;
+    reader.hidden = true;
+  }
   
   if (state === 'speaking') statusEl.textContent = t('reading');
   if (state === 'paused') statusEl.textContent = t('paused');
   if (state === 'idle') updateCount();
 
-  // Sincronização dos botões da barra inferior
   const navPlay = $('navPlay');
   const navPause = $('navPause');
   const navStop = $('navStop');
@@ -193,43 +230,13 @@ function setState(state) {
   if (navStop) navStop.disabled = !active;
 }
 
-/* ---------- Leitor com destaque ---------- */
+/* ---------- Leitor (Apenas espelho visual, sem quebrar o texto) ---------- */
 function buildReader(text) {
   reader.textContent = '';
-  words = [];
-  current = -1;
-  let last = 0;
-  
-  for (const m of text.matchAll(/\S+/g)) {
-    if (m.index > last) {
-      reader.appendChild(document.createTextNode(text.slice(last, m.index)));
-    }
-    const span = document.createElement('span');
-    span.className = 'w';
-    span.textContent = m[0];
-    reader.appendChild(span);
-    words.push({ el: span, start: m.index, end: m.index + m[0].length });
-    last = m.index + m[0].length;
-  }
-  
-  if (last < text.length) {
-    reader.appendChild(document.createTextNode(text.slice(last)));
-  }
-}
-
-function highlight(charIndex) {
-  const i = words.findIndex((w) => charIndex >= w.start && charIndex < w.end);
-  if (i === -1 || i === current) return;
-  
-  if (current >= 0) words[current].el.classList.remove('on');
-  current = i;
-  const el = words[i].el;
-  el.classList.add('on');
-  
-  const top = el.offsetTop - reader.offsetTop;
-  if (top < reader.scrollTop + 20 || top > reader.scrollTop + reader.clientHeight - 60) {
-    reader.scrollTo({ top: Math.max(0, top - 60), behavior: 'smooth' });
-  }
+  // Cria uma cópia visual do texto para o modo leitura
+  const span = document.createElement('span');
+  span.textContent = text;
+  reader.appendChild(span);
 }
 
 /* ---------- Ações ---------- */
@@ -238,29 +245,33 @@ function speakText() {
     statusEl.textContent = t('unsupported');
     return;
   }
-  
+
   if (synth.paused) {
     synth.resume();
     setState('speaking');
     return;
   }
-  
+
   const text = textInput.value;
   if (!text.trim()) {
     statusEl.textContent = t('empty');
     textInput.focus();
     return;
   }
-  
+
+  // Previne duplicação cancelando qualquer fila pendente
   synth.cancel();
+  
+  // Copia o texto para o modo visual
   buildReader(text);
 
   const u = new SpeechSynthesisUtterance(text);
   u.lang = langSelect.value;
   u.rate = Number(rateRange.value);
-  u.onboundary = (e) => { 
-    if (e.name === 'word' || e.name === undefined) highlight(e.charIndex); 
-  };
+  
+  const bestVoice = getBestVoice(langSelect.value);
+  if (bestVoice) u.voice = bestVoice;
+
   u.onend = () => setState('idle');
   u.onerror = () => setState('idle');
 
@@ -292,13 +303,12 @@ function clearText() {
   textInput.focus();
 }
 
-/* ---------- Listeners Principais ---------- */
+/* ---------- Listeners ---------- */
 playBtn.addEventListener('click', speakText);
 pauseBtn.addEventListener('click', togglePause);
 stopBtn.addEventListener('click', stopSpeech);
 clearBtn.addEventListener('click', clearText);
 
-/* ---------- Bottom nav ---------- */
 $('navPlay').addEventListener('click', speakText);
 $('navPause').addEventListener('click', togglePause);
 $('navStop').addEventListener('click', stopSpeech);
@@ -309,7 +319,7 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   const icon = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
   themeBtn.innerHTML = icon;
-  document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0f1020' : '#5b3df5';
+  document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0a0a14' : '#5b3df5';
 }
 
 let savedTheme = null;
@@ -346,7 +356,9 @@ if (shareBtn) {
 }
 
 /* ---------- Init ---------- */
-window.addEventListener('beforeunload', () => synth && synth.cancel());
+window.addEventListener('beforeunload', () => {
+  if (synth) synth.cancel();
+});
 
 let savedLang = null;
 try { savedLang = localStorage.getItem('textvoz-lang'); } catch (e) {}
